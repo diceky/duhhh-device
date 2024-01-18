@@ -9,27 +9,33 @@ button1 = 0
 button2 = 0
 knob1 = 0
 
-button1Pin = 8
-button2Pin = 9
+button1Pin = 2
+button2Pin = 3
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(button1Pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.setup(button2Pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
-url = 'http://127.0.0.1:5000/set-state'
+url = 'http://127.0.0.1:5000/api/set-state'
 
 def button1Pressed(channel):
-    data ='{"button1": 1 }'
+    if GPIO.input(button1Pin):
+        data ='{"button1": 0 }'
+    else:
+        data ='{"button1": 1 }'
     response = requests.post(url, data=data,headers={"Content-Type": "application/json"})
     print(response)
 
 def button2Pressed(channel):
-    data ='{"button2": 1 }'
+    if GPIO.input(button2Pin):
+        data ='{"button2": 0 }'
+    else:
+        data ='{"button2": 1 }'
     response = requests.post(url, data=data,headers={"Content-Type": "application/json"})
     print(response)
 
-GPIO.add_event_detect(button1Pin, GPIO.FALLING, callback=button1Pressed, bouncetime=200)
-GPIO.add_event_detect(button2Pin, GPIO.FALLING, callback=button2Pressed, bouncetime=200)
+GPIO.add_event_detect(button1Pin, GPIO.BOTH, callback=button1Pressed, bouncetime=100)
+GPIO.add_event_detect(button2Pin, GPIO.BOTH, callback=button2Pressed, bouncetime=100)
 
 @app.route('/api/request-state', methods=['GET'])
 def return_state():
