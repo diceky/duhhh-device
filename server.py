@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify
 import json
 import RPi.GPIO as GPIO
 import requests
+from multiprocessing import Process, Value
+from time import sleep
 
 app = Flask(__name__)
 
@@ -11,10 +13,14 @@ knob1 = 0
 
 button1Pin = 2
 button2Pin = 3
+knob1PinA = 17
+knob1PinB = 18
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(button1Pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.setup(button2Pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+GPIO.setup(knob1PinA, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(knob1PinB, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 url = 'http://127.0.0.1:5000/api/set-state'
 
@@ -36,6 +42,26 @@ def button2Pressed(channel):
 
 GPIO.add_event_detect(button1Pin, GPIO.BOTH, callback=button1Pressed, bouncetime=100)
 GPIO.add_event_detect(button2Pin, GPIO.BOTH, callback=button2Pressed, bouncetime=100)
+
+counter = 0
+clkLastState = GPIO.input(knob1PinA)
+
+def background_loop():
+    global url, counter, clkLastState
+    while True:
+        clkState = GPIO.input(knob1PinA)
+        dtState = GPIO.input(knob1PinB)
+        if clkState != clkLastState:
+            if dtState != clkState:
+                counter += 1
+            else:
+                counter -= 1
+            #print(counter)
+            data ='{"knob1": ' + str(counter) + '}'
+            response = requests.post(url, data=data,headers={"Content-Type": "application/json"})
+        clkLastState = clkState
+        #sleep(0.001)
+
 
 @app.route('/api/request-state', methods=['GET'])
 def return_state():
@@ -63,4 +89,8 @@ def set_state():
         return 'OK'
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0') #make server publicly available on same network
+    #app.run(host='0.0.0.0') #make server publicly available on same network    
+    p = Process(target=background_loop)
+    p.start()  
+    app.run(host='0.0.0.0', use_reloader=False)
+    p.join()
