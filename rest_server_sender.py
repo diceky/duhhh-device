@@ -4,6 +4,8 @@ import RPi.GPIO as GPIO
 import requests
 from multiprocessing import Process, Value
 from time import sleep
+import aiohttp
+import asyncio
 
 app = Flask(__name__)
 
@@ -24,27 +26,34 @@ GPIO.setup(knob1PinB, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 url = 'http://127.0.0.1:5000/api/set-state'
 
-def button1Pressed(channel):
+def button1_pressed(channel):
     if GPIO.input(button1Pin):
         data ='{"button1": 0 }'
     else:
         data ='{"button1": 1 }'
-    response = requests.post(url, data=data,headers={"Content-Type": "application/json"})
-    print(response)
+    response = requests.post(url, data=data, headers={"Content-Type": "application/json"})
+    #print(response)
 
-def button2Pressed(channel):
+def button2_pressed(channel):
     if GPIO.input(button2Pin):
         data ='{"button2": 0 }'
     else:
         data ='{"button2": 1 }'
-    response = requests.post(url, data=data,headers={"Content-Type": "application/json"})
-    print(response)
+    response = requests.post(url, data=data, headers={"Content-Type": "application/json"})
+    #print(response)
 
-GPIO.add_event_detect(button1Pin, GPIO.BOTH, callback=button1Pressed, bouncetime=100)
-GPIO.add_event_detect(button2Pin, GPIO.BOTH, callback=button2Pressed, bouncetime=100)
+GPIO.add_event_detect(button1Pin, GPIO.BOTH, callback=button1_pressed, bouncetime=100)
+GPIO.add_event_detect(button2Pin, GPIO.BOTH, callback=button2_pressed, bouncetime=100)
 
 counter = 0
 clkLastState = GPIO.input(knob1PinA)
+
+async def async_post(data):
+    async with aiohttp.ClientSession() as session:
+        response = await session.post(url=url,
+                                      data=data,
+                                      headers={"Content-Type": "application/json"})
+        #await print(response)
 
 def background_loop():
     global url, counter, clkLastState
@@ -56,11 +65,12 @@ def background_loop():
                 counter += 1
             else:
                 counter -= 1
-            #print(counter)
+            print(counter)
             data ='{"knob1": ' + str(counter) + '}'
-            response = requests.post(url, data=data,headers={"Content-Type": "application/json"})
+            #response = requests.post(url, data=data, headers={"Content-Type": "application/json"})
+            asyncio.run(async_post(data))
         clkLastState = clkState
-        #sleep(0.001)
+        sleep(0.001)
 
 
 @app.route('/api/request-state', methods=['GET'])
