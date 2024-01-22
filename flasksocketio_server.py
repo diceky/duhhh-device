@@ -20,7 +20,8 @@ def return_state():
 @sio.on('connect', namespace='/duhhh-device')
 def handle_connect(auth):
     room = auth['room']
-    values[room] = {}
+    if not room in values:
+        values[room] = {}
     join_room(room)
     print('[{}] connect sid : {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), request.sid))
     print('assigning to room: {}'.format(room))
