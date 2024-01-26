@@ -85,6 +85,6 @@ task = sio.start_background_task(background_task)
 auth = {
     "room": deviceID
 }
-sio.connect('http://192.168.11.11:3000', namespaces=['/duhhh-device'], auth=auth)
+sio.connect('https://mood-checker-server.herokuapp.com', namespaces=['/duhhh-device'], auth=auth)
 sio.wait()
         
